@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Malla Curricular - JOSTHIN PAZ</title>
+    <!-- Enlace a los iconos de Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="image.png" type="image/png">
+    <!-- Enlace a tu hoja de estilos -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- PANTALLA DE LOGIN -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-card">
+            <div class="login-header">
+                <i class="fas fa-user-astronaut login-icon"></i>
+                <h2>Acceso al Sistema</h2>
+                <p>Malla Curricular - JOSTHIN PAZ</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="loginUser" placeholder="Usuario" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="loginPass" placeholder="Contraseña" required>
+                </div>
+                <p id="loginError" class="login-error">Credenciales incorrectas. Intente nuevamente.</p>
+                <button type="submit" class="btn-login">
+                    <span>Iniciar Sesión</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APLICATIVO GENERAL -->
+    <div class="container">
+        <header>
+            <div class="header-top">
+                <div>
+                    <h1>Relaciones Internacionales y Estudios Políticos</h1>
+                    <div class="university-name">Universidad Militar Nueva Granada</div>
+                </div>
+            </div>
+            
+            <div class="stats-container">
+                <div class="stat">
+                    <div class="stat-value" id="totalCredits">0</div>
+                    <div class="stat-label">CRÉDITOS TOTALES</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="approvedCredits">0</div>
+                    <div class="stat-label">CRÉDITOS APROBADOS</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="approvedSubjects">0</div>
+                    <div class="stat-label">MATERIAS APROBADAS</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="overallGPA">0.00</div>
+                    <div class="stat-label">PROMEDIO GENERAL</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="progressPercentage">0%</div>
+                    <div class="stat-label">PROGRESO TOTAL</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div class="legend">
+                <div class="legend-title">Leyenda de Estados</div>
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #10b981; color: #10b981;"></div>
+                        <span>Aprobada</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #06b6d4; color: #06b6d4;"></div>
+                        <span>Matriculada (Actual)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #f59e0b; color: #f59e0b;"></div>
+                        <span>Disponible para matricular</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #374151; color: #374151;"></div>
+                        <span>Bloqueada / Pendiente</span>
+                    </div>
+                </div>
+                
+                <div class="electives-notice">
+                    <i class="fas fa-info-circle"></i> Las asignaturas electivas solo están disponibles en los semestres VII, VIII y IX, según el componente seleccionado.
+                </div>
+            </div>
+
+            <div class="semesters-container" id="semestersContainer">
+                <!-- Los semestres se generarán con JavaScript -->
+            </div>
+
+            <div class="pdf-link">
+                <a href="https://drive.google.com/file/d/1KGeIEbYzUmdtEM9goR03KhIR2PombHEl/view?usp=sharing" class="pdf-btn" id="pdfBtn" target="_blank">
+                    <i class="fas fa-file-pdf"></i> Ver Plan de Estudios Oficial (PDF)
+                </a>
+            </div>
+        </main>
+
+        <footer>
+            <p>Plan de Estudios del Programa de Relaciones Internacionales y Estudios Políticos</p>
+            <p>Resolución de Registro Calificado N° 015814 del 18 de diciembre de 2019</p>
+            <p>Universidad Militar Nueva Granada - 2024</p>
+        </footer>
+    </div>
+
+    <!-- Modal para electivas -->
+    <div id="electiveModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 style="margin-bottom: 20px; color: var(--accent-cyan);">Seleccionar Electiva</h2>
+            <div id="electiveOptions"></div>
+        </div>
+    </div>
+
+    <!-- Enlace a tu archivo de lógica y datos -->
+    <script src="data.js"></script>
+</body>
+</html>
