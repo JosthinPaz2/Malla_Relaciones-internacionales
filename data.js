@@ -1,7 +1,7 @@
 // =========================================
 // CONFIGURACIÓN DE JSONBIN.IO
 // =========================================
-const JSONBIN_API_KEY = '$2a$10$He9S0NwjsLyMDpS/V.HYAuZp0DFnPBzy6HFWu92QD6jKMmUI6tpgm'; 
+const JSONBIN_API_KEY = '$2a$10$U8j43lGBQZe0ePwbhn8DEOkN2uozf5b9okHt5XHZfsFFw4mbITVI2'; // ⚠️ Reemplaza con tu Master Key
 const JSONBIN_BASE_URL = 'https://api.jsonbin.io/v3';
 
 // =========================================
@@ -125,9 +125,40 @@ let currentUser = null;
 let binId = null;
 
 // =========================================
-// FUNCIONES DE JSONBIN.IO (SINCRONIZACIÓN EN LA NUBE)
+// FUNCIONES DE JSONBIN.IO
 // =========================================
 
+// Buscar bin existente por nombre de usuario
+async function findUserBin(username) {
+    try {
+        const response = await fetch(`${JSONBIN_BASE_URL}/b/search?name=MallaCurricular_${username}`, {
+            headers: {
+                'X-Master-Key': JSONBIN_API_KEY
+            }
+        });
+        
+        if (!response.ok) throw new Error('Error buscando bin');
+        
+        const data = await response.json();
+        
+        // Si encuentra bins con ese nombre, usar el más reciente
+        if (data.record && data.record.length > 0) {
+            // Ordenar por fecha de creación (más reciente primero)
+            const sortedBins = data.record.sort((a, b) => {
+                return new Date(b.metadata.createdAt) - new Date(a.metadata.createdAt);
+            });
+            
+            return sortedBins[0].id; // Retorna el ID del bin más reciente
+        }
+        
+        return null; // No encontró ningún bin
+    } catch (error) {
+        console.error('Error buscando bin:', error);
+        return null;
+    }
+}
+
+// Crear un nuevo bin en la nube
 async function createCloudBin(userData) {
     try {
         const response = await fetch(`${JSONBIN_BASE_URL}/b`, {
@@ -153,6 +184,7 @@ async function createCloudBin(userData) {
     }
 }
 
+// Actualizar bin existente en la nube
 async function updateCloudBin(userData) {
     if (!binId) {
         return await createCloudBin(userData);
@@ -178,6 +210,7 @@ async function updateCloudBin(userData) {
     }
 }
 
+// Cargar datos desde la nube
 async function loadFromCloud() {
     if (!binId) return false;
     
@@ -208,10 +241,7 @@ async function loadFromCloud() {
     }
 }
 
-// =========================================
-// FUNCIONES DE GUARDADO LOCAL Y SINCRONIZACIÓN
-// =========================================
-
+// Guardar estado en localStorage (caché local)
 function saveState() {
     const state = {
         approvedSubjects: Array.from(approvedSubjects),
@@ -230,6 +260,7 @@ function saveState() {
     }
 }
 
+// Sincronizar con la nube (con debounce para no saturar)
 let syncTimeout;
 function syncToCloud() {
     clearTimeout(syncTimeout);
@@ -248,9 +279,10 @@ function syncToCloud() {
         if (success) {
             showNotification('☁️ Datos sincronizados en la nube', 'success');
         }
-    }, 1500); // Espera 1.5 segundos antes de sincronizar
+    }, 1500);
 }
 
+// Cargar estado desde localStorage
 function loadState() {
     const savedState = localStorage.getItem('mallaCurricularState');
     if (savedState) {
@@ -267,11 +299,10 @@ function loadState() {
 }
 
 // =========================================
-// SISTEMA DE NOTIFICACIONES / ALERTAS
+// SISTEMA DE NOTIFICACIONES
 // =========================================
 
 function showNotification(message, type = 'info') {
-    // Eliminar notificación anterior si existe
     const existing = document.querySelector('.custom-notification');
     if (existing) existing.remove();
     
@@ -309,7 +340,6 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// Agregar animaciones de notificación
 const notificationStyle = document.createElement('style');
 notificationStyle.textContent = `
     @keyframes slideInRight {
@@ -332,7 +362,6 @@ document.addEventListener('DOMContentLoaded', function() {
     renderSemesters();
     updateStats();
     
-    // Lógica del Modal
     const modal = document.getElementById('electiveModal');
     const closeBtn = document.getElementsByClassName('close')[0];
     if (closeBtn) {
@@ -342,7 +371,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (event.target == modal) modal.style.display = "none"; 
     };
 
-    // Lógica del Login con sincronización en la nube
     const loginOverlay = document.getElementById('loginOverlay');
     const loginForm = document.getElementById('loginForm');
     const loginError = document.getElementById('loginError');
@@ -357,18 +385,37 @@ document.addEventListener('DOMContentLoaded', function() {
             if (user === 'jk.joos' && pass === '160515') {
                 currentUser = user;
                 
-                // Intentar cargar desde la nube
-                if (binId) {
-                    showNotification('🔄 Cargando datos desde la nube...', 'info');
+                showNotification('🔄 Buscando tu progreso en la nube...', 'info');
+                
+                // Buscar si ya existe un bin para este usuario
+                const existingBinId = await findUserBin(user);
+                
+                if (existingBinId) {
+                    // Si existe, usar ese bin
+                    binId = existingBinId;
+                    localStorage.setItem('jsonbin_id', binId);
+                    
                     const loaded = await loadFromCloud();
                     if (loaded) {
                         renderSemesters();
                         updateStats();
-                        showNotification('✅ Datos sincronizados desde la nube', 'success');
+                        showNotification('✅ Progreso cargado desde la nube', 'success');
                     } else {
-                        showNotification('⚠️ No se pudieron cargar los datos de la nube', 'warning');
+                        showNotification('⚠️ Error al cargar datos', 'warning');
                     }
                 } else {
+                    // Si no existe, crear uno nuevo
+                    showNotification(' Creando nuevo registro en la nube...', 'info');
+                    const state = {
+                        approvedSubjects: Array.from(approvedSubjects),
+                        enrolledSubjects: Array.from(enrolledSubjects),
+                        currentSemester: currentSemester,
+                        selectedElectives: selectedElectives,
+                        selectedSedes: selectedSedes,
+                        grades: grades,
+                        lastUpdate: new Date().toISOString()
+                    };
+                    await createCloudBin(state);
                     showNotification('👋 Bienvenido, ' + user, 'success');
                 }
                 
@@ -396,7 +443,7 @@ function initializeApp() {
         }
         else if (e.target.classList.contains('btn-enroll')) {
             enrollSubject(e.target.getAttribute('data-code'));
-            showNotification(' Materia matriculada', 'info');
+            showNotification('📚 Materia matriculada', 'info');
         }
         else if (e.target.classList.contains('btn-unenroll')) {
             unenrollSubject(e.target.getAttribute('data-code'));
@@ -415,7 +462,7 @@ function initializeApp() {
         if (e.target.classList.contains('sede-select')) {
             selectedSedes[e.target.getAttribute('data-code')] = e.target.value;
             saveState();
-            showNotification('📍 Sede actualizada', 'info');
+            showNotification(' Sede actualizada', 'info');
         } else if (e.target.classList.contains('grade-input')) {
             const code = e.target.getAttribute('data-code');
             const grade = parseFloat(e.target.value);
