@@ -1,7 +1,7 @@
 // =========================================
 // CONFIGURACIÓN DE JSONBIN.IO
 // =========================================
-const JSONBIN_API_KEY = '$2a$10$U8j43lGBQZe0ePwbhn8DEOkN2uozf5b9okHt5XHZfsFFw4mbITVI2'; // ⚠️ Reemplaza con tu Master Key
+const JSONBIN_API_KEY = '$2a$10$5Gjr.qNkoE5QJU.UqcPOP.aq55FwVaHYTzutpf0tsjKAHW0tfqHye'; // ⚠️ Reemplaza con tu Master Key
 const JSONBIN_BASE_URL = 'https://api.jsonbin.io/v3';
 
 // =========================================
@@ -128,7 +128,6 @@ let binId = null;
 // FUNCIONES DE JSONBIN.IO
 // =========================================
 
-// Buscar bin existente por nombre de usuario
 async function findUserBin(username) {
     try {
         const response = await fetch(`${JSONBIN_BASE_URL}/b/search?name=MallaCurricular_${username}`, {
@@ -141,24 +140,21 @@ async function findUserBin(username) {
         
         const data = await response.json();
         
-        // Si encuentra bins con ese nombre, usar el más reciente
         if (data.record && data.record.length > 0) {
-            // Ordenar por fecha de creación (más reciente primero)
             const sortedBins = data.record.sort((a, b) => {
                 return new Date(b.metadata.createdAt) - new Date(a.metadata.createdAt);
             });
             
-            return sortedBins[0].id; // Retorna el ID del bin más reciente
+            return sortedBins[0].id;
         }
         
-        return null; // No encontró ningún bin
+        return null;
     } catch (error) {
         console.error('Error buscando bin:', error);
         return null;
     }
 }
 
-// Crear un nuevo bin en la nube
 async function createCloudBin(userData) {
     try {
         const response = await fetch(`${JSONBIN_BASE_URL}/b`, {
@@ -184,7 +180,6 @@ async function createCloudBin(userData) {
     }
 }
 
-// Actualizar bin existente en la nube
 async function updateCloudBin(userData) {
     if (!binId) {
         return await createCloudBin(userData);
@@ -210,7 +205,6 @@ async function updateCloudBin(userData) {
     }
 }
 
-// Cargar datos desde la nube
 async function loadFromCloud() {
     if (!binId) return false;
     
@@ -241,7 +235,6 @@ async function loadFromCloud() {
     }
 }
 
-// Guardar estado en localStorage (caché local)
 function saveState() {
     const state = {
         approvedSubjects: Array.from(approvedSubjects),
@@ -254,13 +247,11 @@ function saveState() {
     };
     localStorage.setItem('mallaCurricularState', JSON.stringify(state));
     
-    // Sincronizar con la nube si hay usuario logueado
     if (currentUser) {
         syncToCloud();
     }
 }
 
-// Sincronizar con la nube (con debounce para no saturar)
 let syncTimeout;
 function syncToCloud() {
     clearTimeout(syncTimeout);
@@ -282,7 +273,6 @@ function syncToCloud() {
     }, 1500);
 }
 
-// Cargar estado desde localStorage
 function loadState() {
     const savedState = localStorage.getItem('mallaCurricularState');
     if (savedState) {
@@ -357,7 +347,10 @@ document.head.appendChild(notificationStyle);
 // INICIALIZACIÓN Y EVENTOS
 // =========================================
 document.addEventListener('DOMContentLoaded', function() {
-    loadState();
+    // LIMPIAR LOCALSTORAGE AL INICIAR para evitar datos corruptos
+    localStorage.removeItem('mallaCurricularState');
+    localStorage.removeItem('jsonbin_id');
+    
     initializeApp();
     renderSemesters();
     updateStats();
@@ -387,11 +380,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 showNotification('🔄 Buscando tu progreso en la nube...', 'info');
                 
-                // Buscar si ya existe un bin para este usuario
                 const existingBinId = await findUserBin(user);
                 
                 if (existingBinId) {
-                    // Si existe, usar ese bin
                     binId = existingBinId;
                     localStorage.setItem('jsonbin_id', binId);
                     
@@ -404,19 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         showNotification('⚠️ Error al cargar datos', 'warning');
                     }
                 } else {
-                    // Si no existe, crear uno nuevo
-                    showNotification(' Creando nuevo registro en la nube...', 'info');
-                    const state = {
-                        approvedSubjects: Array.from(approvedSubjects),
-                        enrolledSubjects: Array.from(enrolledSubjects),
-                        currentSemester: currentSemester,
-                        selectedElectives: selectedElectives,
-                        selectedSedes: selectedSedes,
-                        grades: grades,
-                        lastUpdate: new Date().toISOString()
-                    };
-                    await createCloudBin(state);
-                    showNotification('👋 Bienvenido, ' + user, 'success');
+                    showNotification(' Bienvenido, ' + user + '. Empezando desde cero.', 'success');
                 }
                 
                 loginOverlay.style.opacity = '0';
@@ -462,7 +441,7 @@ function initializeApp() {
         if (e.target.classList.contains('sede-select')) {
             selectedSedes[e.target.getAttribute('data-code')] = e.target.value;
             saveState();
-            showNotification(' Sede actualizada', 'info');
+            showNotification('📍 Sede actualizada', 'info');
         } else if (e.target.classList.contains('grade-input')) {
             const code = e.target.getAttribute('data-code');
             const grade = parseFloat(e.target.value);
@@ -593,9 +572,6 @@ function checkSubjectAvailability(subject, semester) {
     return true;
 }
 
-// =========================================
-// ACCIONES
-// =========================================
 function approveSubject(code) {
     approvedSubjects.add(code);
     enrolledSubjects.delete(code);
@@ -645,9 +621,6 @@ function updateStats() {
     document.getElementById('progressFill').style.width = `${progressPercentage}%`;
 }
 
-// =========================================
-// UTILIDADES
-// =========================================
 function romanize(num) {
     const roman = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X' };
     return roman[num] || num.toString();
