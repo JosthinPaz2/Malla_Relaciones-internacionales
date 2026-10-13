@@ -1,8 +1,12 @@
+
 // =========================================
 // CONFIGURACIÓN DE JSONBIN.IO
 // =========================================
-const JSONBIN_API_KEY = '$2a$10$5Gjr.qNkoE5QJU.UqcPOP.aq55FwVaHYTzutpf0tsjKAHW0tfqHye'; // ⚠️ Reemplaza con tu Master Key
+const JSONBIN_API_KEY = '$2a$10$YQykE910K/GcHae2ZiN8jeOiLhg0qhC6x0zjJSwiL5we/3cZlJx4O'; // ⚠️ Tu Master Key
 const JSONBIN_BASE_URL = 'https://api.jsonbin.io/v3';
+
+// ⚠️ PEGA AQUÍ EL ID DEL BIN QUE CREASTE MANUALMENTE
+const BIN_ID = '6acde58fac6210605a2ce020'; 
 
 // =========================================
 // DATOS DEL PLAN DE ESTUDIOS
@@ -122,71 +126,14 @@ let selectedElectives = {};
 let selectedSedes = {};
 let grades = {};
 let currentUser = null;
-let binId = null;
 
 // =========================================
-// FUNCIONES DE JSONBIN.IO
+// FUNCIONES DE JSONBIN.IO (USANDO ID FIJO)
 // =========================================
-
-async function findUserBin(username) {
-    try {
-        const response = await fetch(`${JSONBIN_BASE_URL}/b/search?name=MallaCurricular_${username}`, {
-            headers: {
-                'X-Master-Key': JSONBIN_API_KEY
-            }
-        });
-        
-        if (!response.ok) throw new Error('Error buscando bin');
-        
-        const data = await response.json();
-        
-        if (data.record && data.record.length > 0) {
-            const sortedBins = data.record.sort((a, b) => {
-                return new Date(b.metadata.createdAt) - new Date(a.metadata.createdAt);
-            });
-            
-            return sortedBins[0].id;
-        }
-        
-        return null;
-    } catch (error) {
-        console.error('Error buscando bin:', error);
-        return null;
-    }
-}
-
-async function createCloudBin(userData) {
-    try {
-        const response = await fetch(`${JSONBIN_BASE_URL}/b`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Master-Key': JSONBIN_API_KEY,
-                'X-Bin-Name': `MallaCurricular_${currentUser}`
-            },
-            body: JSON.stringify(userData)
-        });
-        
-        if (!response.ok) throw new Error('Error al crear bin');
-        
-        const data = await response.json();
-        binId = data.metadata.id;
-        localStorage.setItem('jsonbin_id', binId);
-        console.log('✅ Bin creado en la nube:', binId);
-        return true;
-    } catch (error) {
-        console.error('❌ Error creando bin:', error);
-        return false;
-    }
-}
 
 async function updateCloudBin(userData) {
-    if (!binId) {
-        return await createCloudBin(userData);
-    }
-    
     try {
-        const response = await fetch(`${JSONBIN_BASE_URL}/b/${binId}`, {
+        const response = await fetch(`${JSONBIN_BASE_URL}/b/${BIN_ID}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -206,10 +153,8 @@ async function updateCloudBin(userData) {
 }
 
 async function loadFromCloud() {
-    if (!binId) return false;
-    
     try {
-        const response = await fetch(`${JSONBIN_BASE_URL}/b/${binId}/latest`, {
+        const response = await fetch(`${JSONBIN_BASE_URL}/b/${BIN_ID}/latest`, {
             headers: {
                 'X-Master-Key': JSONBIN_API_KEY
             }
@@ -266,10 +211,7 @@ function syncToCloud() {
             lastUpdate: new Date().toISOString()
         };
         
-        const success = await updateCloudBin(state);
-        if (success) {
-            showNotification('☁️ Datos sincronizados en la nube', 'success');
-        }
+        await updateCloudBin(state);
     }, 1500);
 }
 
@@ -284,8 +226,6 @@ function loadState() {
         selectedSedes = state.selectedSedes || {};
         grades = state.grades || {};
     }
-    
-    binId = localStorage.getItem('jsonbin_id');
 }
 
 // =========================================
@@ -347,10 +287,6 @@ document.head.appendChild(notificationStyle);
 // INICIALIZACIÓN Y EVENTOS
 // =========================================
 document.addEventListener('DOMContentLoaded', function() {
-    // LIMPIAR LOCALSTORAGE AL INICIAR para evitar datos corruptos
-    localStorage.removeItem('mallaCurricularState');
-    localStorage.removeItem('jsonbin_id');
-    
     initializeApp();
     renderSemesters();
     updateStats();
@@ -378,24 +314,16 @@ document.addEventListener('DOMContentLoaded', function() {
             if (user === 'jk.joos' && pass === '160515') {
                 currentUser = user;
                 
-                showNotification('🔄 Buscando tu progreso en la nube...', 'info');
+                showNotification('🔄 Cargando tu progreso...', 'info');
                 
-                const existingBinId = await findUserBin(user);
-                
-                if (existingBinId) {
-                    binId = existingBinId;
-                    localStorage.setItem('jsonbin_id', binId);
-                    
-                    const loaded = await loadFromCloud();
-                    if (loaded) {
-                        renderSemesters();
-                        updateStats();
-                        showNotification('✅ Progreso cargado desde la nube', 'success');
-                    } else {
-                        showNotification('⚠️ Error al cargar datos', 'warning');
-                    }
+                // Siempre cargar desde la nube (usando el ID fijo)
+                const loaded = await loadFromCloud();
+                if (loaded) {
+                    renderSemesters();
+                    updateStats();
+                    showNotification('✅ Progreso cargado desde la nube', 'success');
                 } else {
-                    showNotification(' Bienvenido, ' + user + '. Empezando desde cero.', 'success');
+                    showNotification('⚠️ Empezando desde cero', 'warning');
                 }
                 
                 loginOverlay.style.opacity = '0';
@@ -447,7 +375,7 @@ function initializeApp() {
             const grade = parseFloat(e.target.value);
             if (!isNaN(grade) && grade >= 0 && grade <= 5) {
                 grades[code] = grade;
-                showNotification(`📝 Nota guardada: ${grade}`, 'success');
+                showNotification(` Nota guardada: ${grade}`, 'success');
             } else {
                 delete grades[code];
             }
